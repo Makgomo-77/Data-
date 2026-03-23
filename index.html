@@ -1,1 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>DataPulse Dashboard</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b0f1a;
+      --surface: #111827;
+      --surface2: #1a2235;
+      --border: #1f2d45;
+      --accent: #00e5ff;
+      --accent2: #ff6b6b;
+      --accent3: #a3e635;
+      --accent4: #f59e0b;
+      --text: #e2e8f0;
+      --muted: #64748b;
+      --font-mono: 'Space Mono', monospace;
+      --font-body: 'DM Sans', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Animated grid background */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,229,255,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,229,255,0.03) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ─── SIDEBAR ─── */
+    .sidebar {
+      position: fixed;
+      top: 0; left: 0;
+      width: 240px;
+      height: 100vh;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+      padding: 0;
+    }
+
+    .sidebar-brand {
+      padding: 1.5rem 1.25rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-name {
+      font-family: var(--font-mono);
+      font-size: 1.1rem;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+
+    .brand-sub {
+      font-size: 0.7rem;
+      color: var(--muted);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .sidebar-nav {
+      padding: 1rem 0;
+      flex: 1;
+    }
+
+    .nav-label {
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      padding: 0.5rem 1.25rem 0.25rem;
+    }
+
+    .nav-item-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 1.25rem;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 0.875rem;
+      border: none;
+      background: transparent;
+      width: 100%;
+      text-align: left;
+      transition: all 0.2s;
+      border-left: 3px solid transparent;
+    }
+
+    .nav-item-btn:hover { color: var(--text); background: var(--surface2); }
+    .nav-item-btn.active {
+      color: var(--accent);
+      background: rgba(0,229,255,0.07);
+      border-left-color: var(--accent);
+    }
+
+    .nav-icon { font-size: 1rem; width: 20px; text-align: center; }
+
+    .sidebar-footer {
+      padding: 1rem 1.25rem;
+      border-top: 1px solid var(--border);
+    }
+
+    .user-avatar {
+      width: 32px; height: 32px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--bg);
+      flex-shrink: 0;
+    }
+
+    /* ─── MAIN CONTENT ─── */
+    .main-content {
+      margin-left: 240px;
+      position: relative;
+      z-index: 1;
+      min-height: 100vh;
+    }
+
+    /* ─── TOPBAR ─── */
+    .topbar {
+      background: rgba(17,24,39,0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0.875rem 2rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .page-title {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .page-title span { color: var(--accent); }
+
+    .topbar-right { display: flex; align-items: center; gap: 1rem; }
+
+    .live-badge {
+      display: flex; align-items: center; gap: 0.4rem;
+      background: rgba(163,230,53,0.1);
+      border: 1px solid rgba(163,230,53,0.3);
+      color: var(--accent3);
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      padding: 0.3rem 0.75rem;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+    }
+
+    .live-dot {
+      width: 6px; height: 6px;
+      background: var(--accent3);
+      border-radius: 50%;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    .refresh-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      padding: 0.35rem 0.9rem;
+      font-size: 0.78rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-family: var(--font-body);
+    }
+
+    .refresh-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .time-display {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+    }
+
+    /* ─── DASHBOARD BODY ─── */
+    .dashboard-body { padding: 2rem; }
+
+    /* ─── KPI CARDS ─── */
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+
+    .kpi-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--accent);
+    }
+
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+
+    .kpi-card.cyan::before  { background: var(--accent); }
+    .kpi-card.red::before   { background: var(--accent2); }
+    .kpi-card.green::before { background: var(--accent3); }
+    .kpi-card.amber::before { background: var(--accent4); }
+
+    .kpi-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      margin-bottom: 0.5rem;
+    }
+
+    .kpi-value {
+      font-family: var(--font-mono);
+      font-size: 2rem;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 0.75rem;
+    }
+
+    .kpi-card.cyan  .kpi-value { color: var(--accent); }
+    .kpi-card.red   .kpi-value { color: var(--accent2); }
+    .kpi-card.green .kpi-value { color: var(--accent3); }
+    .kpi-card.amber .kpi-value { color: var(--accent4); }
+
+    .kpi-change {
+      font-size: 0.78rem;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .kpi-change.up   { color: var(--accent3); }
+    .kpi-change.down { color: var(--accent2); }
+
+    .sparkline-mini {
+      position: absolute;
+      bottom: 0; right: 0;
+      opacity: 0.15;
+      width: 90px;
+      height: 50px;
+    }
+
+    /* ─── SECTION HEADING ─── */
+    .section-heading {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .section-heading::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ─── CHART CARDS ─── */
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.5rem;
+      height: 100%;
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1.5rem;
+    }
+
+    .chart-title {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .chart-subtitle {
+      font-size: 0.72rem;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .chart-badge {
+      font-size: 0.65rem;
+      font-family: var(--font-mono);
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      background: rgba(0,229,255,0.1);
+      border: 1px solid rgba(0,229,255,0.2);
+      color: var(--accent);
+    }
+
+    .filter-tabs {
+      display: flex;
+      gap: 0.25rem;
+      background: var(--surface2);
+      border-radius: 8px;
+      padding: 3px;
+    }
+
+    .filter-tab {
+      font-size: 0.7rem;
+      padding: 0.25rem 0.7rem;
+      border-radius: 5px;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: var(--font-mono);
+      transition: all 0.2s;
+    }
+
+    .filter-tab.active {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    /* ─── TABLE ─── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.825rem;
+    }
+
+    .data-table th {
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .data-table td {
+      padding: 0.75rem 1rem;
+      border-bottom: 1px solid rgba(31,45,69,0.5);
+      color: var(--text);
+    }
+
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tbody tr:hover td { background: rgba(0,229,255,0.03); }
+
+    .status-badge {
+      font-size: 0.65rem;
+      padding: 0.2rem 0.6rem;
+      border-radius: 20px;
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+
+    .status-active   { background: rgba(163,230,53,0.1); color: var(--accent3); border: 1px solid rgba(163,230,53,0.3); }
+    .status-pending  { background: rgba(245,158,11,0.1); color: var(--accent4); border: 1px solid rgba(245,158,11,0.3); }
+    .status-inactive { background: rgba(255,107,107,0.1); color: var(--accent2); border: 1px solid rgba(255,107,107,0.3); }
+
+    .progress-bar-custom {
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: var(--accent);
+      transition: width 1s ease;
+    }
+
+    /* ─── ACTIVITY FEED ─── */
+    .activity-item {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.75rem 0;
+      border-bottom: 1px solid rgba(31,45,69,0.5);
+    }
+
+    .activity-item:last-child { border-bottom: none; }
+
+    .activity-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 5px;
+    }
+
+    .activity-text { font-size: 0.8rem; color: var(--text); }
+    .activity-time { font-size: 0.68rem; color: var(--muted); font-family: var(--font-mono); margin-top: 2px; }
+
+    /* ─── GAUGE / DONUT WRAPPER ─── */
+    .donut-wrapper { position: relative; }
+    .donut-center {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .donut-center-val {
+      font-family: var(--font-mono);
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--accent);
+      line-height: 1;
+    }
+
+    .donut-center-label {
+      font-size: 0.65rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    /* ─── ANIMATE IN ─── */
+    .fade-up {
+      opacity: 0;
+      transform: translateY(16px);
+      animation: fadeUp 0.5s ease forwards;
+    }
+
+    @keyframes fadeUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-up:nth-child(1) { animation-delay: 0.05s; }
+    .fade-up:nth-child(2) { animation-delay: 0.1s; }
+    .fade-up:nth-child(3) { animation-delay: 0.15s; }
+    .fade-up:nth-child(4) { animation-delay: 0.2s; }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 768px) {
+      .sidebar { display: none; }
+      .main-content { margin-left: 0; }
+    }
+
+    /* ─── TOOLTIP OVERRIDE ─── */
+    canvas { border-radius: 8px; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════ SIDEBAR ═══════════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-brand">
+    <div class="brand-name">◈ DataPulse</div>
+    <div class="brand-sub">Analytics Dashboard</div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div class="nav-label">Overview</div>
+    <button class="nav-item-btn active">
+      <span class="nav-icon">▦</span> Dashboard
+    </button>
+    <button class="nav-item-btn">
+      <span class="nav-icon">◈</span> Analytics
+    </button>
+    <button class="nav-item-btn">
+      <span class="nav-icon">◎</span> Reports
+    </button>
+
+    <div class="nav-label" style="margin-top:1rem;">Management</div>
+    <button class="nav-item-btn">
+      <span class="nav-icon">◉</span> Users
+    </button>
+    <button class="nav-item-btn">
+      <span class="nav-icon">▷</span> Campaigns
+    </button>
+    <button class="nav-item-btn">
+      <span class="nav-icon">◇</span> Products
+    </button>
+
+    <div class="nav-label" style="margin-top:1rem;">System</div>
+    <button class="nav-item-btn">
+      <span class="nav-icon">⊙</span> Settings
+    </button>
+    <button class="nav-item-btn">
+      <span class="nav-icon">◻</span> Logs
+    </button>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="d-flex align-items-center gap-2">
+      <div class="user-avatar">JD</div>
+      <div>
+        <div style="font-size:0.8rem; font-weight:600;">Junior Dev</div>
+        <div style="font-size:0.68rem; color:var(--muted);">Analyst</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ═══════════════════════════ MAIN ═══════════════════════════ -->
+<main class="main-content">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div class="page-title">
+      <span>~/</span>dashboard <span style="color:var(--muted);">/ overview</span>
+    </div>
+    <div class="topbar-right">
+      <div class="live-badge">
+        <div class="live-dot"></div> LIVE
+      </div>
+      <button class="refresh-btn" onclick="refreshData()">↻ Refresh</button>
+      <div class="time-display" id="clock">--:--:--</div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD BODY -->
+  <div class="dashboard-body">
+
+    <!-- KPI ROW -->
+    <div class="section-heading">Key Metrics</div>
+    <div class="row g-3 mb-4">
+      <div class="col-6 col-lg-3 fade-up">
+        <div class="kpi-card cyan">
+          <div class="kpi-label">Total Revenue</div>
+          <div class="kpi-value" id="kpi-revenue">$0</div>
+          <div class="kpi-change up" id="kpi-revenue-change">▲ +0%</div>
+          <canvas class="sparkline-mini" id="spark1"></canvas>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3 fade-up">
+        <div class="kpi-card green">
+          <div class="kpi-label">Active Users</div>
+          <div class="kpi-value" id="kpi-users">0</div>
+          <div class="kpi-change up" id="kpi-users-change">▲ +0%</div>
+          <canvas class="sparkline-mini" id="spark2"></canvas>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3 fade-up">
+        <div class="kpi-card amber">
+          <div class="kpi-label">Conversion Rate</div>
+          <div class="kpi-value" id="kpi-conv">0%</div>
+          <div class="kpi-change down" id="kpi-conv-change">▼ -0%</div>
+          <canvas class="sparkline-mini" id="spark3"></canvas>
+        </div>
+      </div>
+      <div class="col-6 col-lg-3 fade-up">
+        <div class="kpi-card red">
+          <div class="kpi-label">Bounce Rate</div>
+          <div class="kpi-value" id="kpi-bounce">0%</div>
+          <div class="kpi-change up" id="kpi-bounce-change">▲ +0%</div>
+          <canvas class="sparkline-mini" id="spark4"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHARTS ROW 1 -->
+    <div class="section-heading">Visual Analytics</div>
+    <div class="row g-3 mb-4">
+
+      <!-- Revenue Line Chart -->
+      <div class="col-12 col-lg-8">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Revenue Over Time</div>
+              <div class="chart-subtitle">Monthly trend with projection</div>
+            </div>
+            <div class="filter-tabs">
+              <button class="filter-tab active" onclick="setRange(this,'1W')">1W</button>
+              <button class="filter-tab" onclick="setRange(this,'1M')">1M</button>
+              <button class="filter-tab" onclick="setRange(this,'6M')">6M</button>
+              <button class="filter-tab" onclick="setRange(this,'1Y')">1Y</button>
+            </div>
+          </div>
+          <canvas id="revenueChart" height="100"></canvas>
+        </div>
+      </div>
+
+      <!-- Donut Chart -->
+      <div class="col-12 col-lg-4">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Traffic Sources</div>
+              <div class="chart-subtitle">Session breakdown</div>
+            </div>
+            <span class="chart-badge">LIVE</span>
+          </div>
+          <div class="donut-wrapper">
+            <canvas id="donutChart" height="180"></canvas>
+            <div class="donut-center">
+              <div class="donut-center-val" id="donut-total">84%</div>
+              <div class="donut-center-label">Coverage</div>
+            </div>
+          </div>
+          <div class="mt-3" id="donut-legend"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHARTS ROW 2 -->
+    <div class="row g-3 mb-4">
+
+      <!-- Bar Chart -->
+      <div class="col-12 col-lg-6">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">User Acquisition</div>
+              <div class="chart-subtitle">New vs Returning users per channel</div>
+            </div>
+          </div>
+          <canvas id="barChart" height="140"></canvas>
+        </div>
+      </div>
+
+      <!-- Activity Feed -->
+      <div class="col-12 col-lg-6">
+        <div class="chart-card">
+          <div class="chart-header">
+            <div>
+              <div class="chart-title">Live Activity Feed</div>
+              <div class="chart-subtitle">Real-time system events</div>
+            </div>
+            <span class="chart-badge">STREAM</span>
+          </div>
+          <div id="activity-feed" style="max-height: 250px; overflow-y: auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="section-heading">Data Table</div>
+    <div class="chart-card mb-4">
+      <div class="chart-header">
+        <div>
+          <div class="chart-title">Campaign Performance</div>
+          <div class="chart-subtitle">Top campaigns sorted by conversion</div>
+        </div>
+        <div class="d-flex gap-2 align-items-center">
+          <input
+            type="text"
+            id="tableSearch"
+            placeholder="Filter rows..."
+            oninput="filterTable()"
+            style="background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:0.3rem 0.75rem;border-radius:6px;font-size:0.78rem;outline:none;"
+          />
+        </div>
+      </div>
+      <div style="overflow-x: auto;">
+        <table class="data-table" id="campaignTable">
+          <thead>
+            <tr>
+              <th onclick="sortTable(0)">Campaign ↕</th>
+              <th onclick="sortTable(1)">Channel ↕</th>
+              <th onclick="sortTable(2)">Impressions ↕</th>
+              <th onclick="sortTable(3)">Clicks ↕</th>
+              <th onclick="sortTable(4)">CTR ↕</th>
+              <th>Progress</th>
+              <th onclick="sortTable(6)">Status ↕</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div><!-- /dashboard-body -->
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/* ══════════════════════════════════════════
+   DATA & CONFIG
+══════════════════════════════════════════ */
+const CHART_DEFAULTS = {
+  color: {
+    text: '#64748b',
+    grid: 'rgba(31,45,69,0.8)',
+  }
+};
+
+Chart.defaults.color = CHART_DEFAULTS.color.text;
+Chart.defaults.borderColor = CHART_DEFAULTS.color.grid;
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+
+/* ── KPI Data ── */
+const kpiData = {
+  revenue:  { value: '$148.2K', change: '+12.4%', dir: 'up' },
+  users:    { value: '24,831',  change: '+8.1%',  dir: 'up' },
+  conv:     { value: '6.7%',    change: '-1.2%',  dir: 'down' },
+  bounce:   { value: '34.5%',   change: '+0.8%',  dir: 'up' },
+};
+
+/* ── Campaign Table Data ── */
+const campaigns = [
+  ['Spring Sale 2024',   'Email',    '2,400,000', '124,500', '5.19%', 78, 'active'],
+  ['Brand Awareness Q1', 'Display',  '8,100,000', '210,000', '2.59%', 55, 'active'],
+  ['Retargeting Wave 3', 'Paid',     '1,200,000', '98,700',  '8.23%', 91, 'active'],
+  ['Newsletter Apr',     'Email',    '540,000',   '32,100',  '5.94%', 62, 'pending'],
+  ['Summer Preview',     'Social',   '3,600,000', '189,000', '5.25%', 40, 'pending'],
+  ['Promo Code Drive',   'Affiliate','720,000',   '54,000',  '7.50%', 83, 'active'],
+  ['Legacy Remarketing', 'Paid',     '990,000',   '28,000',  '2.83%', 30, 'inactive'],
+  ['Product Launch X',   'Social',   '4,800,000', '312,000', '6.50%', 95, 'active'],
+];
+
+/* ── Activity Events ── */
+const eventTemplates = [
+  ['New user registered: user_****', '#00e5ff'],
+  ['Campaign "Spring Sale" updated', '#f59e0b'],
+  ['Revenue threshold hit: $1K', '#a3e635'],
+  ['High bounce rate detected', '#ff6b6b'],
+  ['API rate limit warning', '#f59e0b'],
+  ['Export completed: report.csv', '#00e5ff'],
+  ['Segment sync finished', '#a3e635'],
+  ['New conversion event fired', '#a3e635'],
+];
+
+/* ══════════════════════════════════════════
+   CLOCK
+══════════════════════════════════════════ */
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock').textContent =
+    now.toTimeString().slice(0,8);
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ══════════════════════════════════════════
+   KPI CARDS
+══════════════════════════════════════════ */
+function animateCount(el, target, prefix='', suffix='', duration=1200) {
+  const raw = parseFloat(target.replace(/[^0-9.]/g,''));
+  const start = performance.now();
+  function step(ts) {
+    const p = Math.min((ts - start) / duration, 1);
+    const ease = 1 - Math.pow(1 - p, 3);
+    const val = (raw * ease).toFixed(raw % 1 !== 0 ? 1 : 0);
+    el.textContent = prefix + Number(val).toLocaleString() + suffix;
+    if (p < 1) requestAnimationFrame(step);
+    else el.textContent = prefix + target.replace(/[^0-9.%K]/g,'') + suffix.replace(suffix,'');
+  }
+  requestAnimationFrame(step);
+}
+
+function loadKPIs() {
+  document.getElementById('kpi-revenue').textContent = kpiData.revenue.value;
+  document.getElementById('kpi-users').textContent   = kpiData.users.value;
+  document.getElementById('kpi-conv').textContent    = kpiData.conv.value;
+  document.getElementById('kpi-bounce').textContent  = kpiData.bounce.value;
+
+  const rc = document.getElementById('kpi-revenue-change');
+  rc.textContent = '▲ ' + kpiData.revenue.change;
+  rc.className = 'kpi-change up';
+
+  const uc = document.getElementById('kpi-users-change');
+  uc.textContent = '▲ ' + kpiData.users.change;
+  uc.className = 'kpi-change up';
+
+  const cc = document.getElementById('kpi-conv-change');
+  cc.textContent = '▼ ' + kpiData.conv.change;
+  cc.className = 'kpi-change down';
+
+  const bc = document.getElementById('kpi-bounce-change');
+  bc.textContent = '▲ ' + kpiData.bounce.change;
+  bc.className = 'kpi-change up';
+}
+
+/* ── Mini sparklines ── */
+function drawSparkline(canvasId, color, values) {
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: values.map((_,i) => i),
+      datasets: [{ data: values, borderColor: color, borderWidth: 2, pointRadius: 0, tension: 0.4, fill: false }]
+    },
+    options: { responsive: false, animation: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } } }
+  });
+}
+
+/* ══════════════════════════════════════════
+   REVENUE LINE CHART
+══════════════════════════════════════════ */
+const revenueRanges = {
+  '1W': { labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], data: [12.1, 15.4, 11.8, 17.2, 19.5, 14.3, 16.8] },
+  '1M': { labels: ['W1','W2','W3','W4'], data: [44.2, 51.8, 48.3, 55.9] },
+  '6M': { labels: ['Nov','Dec','Jan','Feb','Mar','Apr'], data: [88, 102, 95, 118, 132, 148] },
+  '1Y': { labels: ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'], data: [62,70,68,75,88,95,91,103,110,118,132,148] },
+};
+
+let revenueChart;
+
+function buildRevenueChart(range='1Y') {
+  const d = revenueRanges[range];
+  const ctx = document.getElementById('revenueChart').getContext('2d');
+  if (revenueChart) revenueChart.destroy();
+
+  const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+  gradient.addColorStop(0, 'rgba(0,229,255,0.25)');
+  gradient.addColorStop(1, 'rgba(0,229,255,0)');
+
+  revenueChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: d.labels,
+      datasets: [{
+        label: 'Revenue ($K)',
+        data: d.data,
+        borderColor: '#00e5ff',
+        borderWidth: 2,
+        backgroundColor: gradient,
+        pointBackgroundColor: '#00e5ff',
+        pointRadius: 4,
+        pointHoverRadius: 6,
+        tension: 0.4,
+        fill: true,
+      }]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#111827',
+          borderColor: '#1f2d45',
+          borderWidth: 1,
+          titleColor: '#00e5ff',
+          bodyColor: '#e2e8f0',
+          callbacks: { label: ctx => ' $' + ctx.parsed.y + 'K' }
+        }
+      },
+      scales: {
+        x: { grid: { color: 'rgba(31,45,69,0.6)' }, ticks: { color: '#64748b' } },
+        y: { grid: { color: 'rgba(31,45,69,0.6)' }, ticks: { color: '#64748b', callback: v => '$'+v+'K' } }
+      }
+    }
+  });
+}
+
+function setRange(btn, range) {
+  document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildRevenueChart(range);
+}
+
+/* ══════════════════════════════════════════
+   DONUT CHART
+══════════════════════════════════════════ */
+const donutColors  = ['#00e5ff','#a3e635','#f59e0b','#ff6b6b','#818cf8'];
+const donutLabels  = ['Organic','Social','Email','Paid','Referral'];
+const donutValues  = [34, 22, 18, 16, 10];
+
+function buildDonutChart() {
+  const ctx = document.getElementById('donutChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: donutLabels,
+      datasets: [{
+        data: donutValues,
+        backgroundColor: donutColors.map(c => c + '33'),
+        borderColor: donutColors,
+        borderWidth: 2,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      cutout: '72%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#111827',
+          borderColor: '#1f2d45',
+          borderWidth: 1,
+          callbacks: { label: ctx => ' ' + ctx.label + ': ' + ctx.raw + '%' }
+        }
+      }
+    }
+  });
+
+  // Custom legend
+  const legend = document.getElementById('donut-legend');
+  legend.innerHTML = donutLabels.map((l,i) =>
+    `<div class="d-flex justify-content-between align-items-center mb-1">
+      <div class="d-flex align-items-center gap-2">
+        <div style="width:8px;height:8px;border-radius:50%;background:${donutColors[i]};"></div>
+        <span style="font-size:0.78rem;color:var(--text)">${l}</span>
+      </div>
+      <span style="font-family:var(--font-mono);font-size:0.75rem;color:${donutColors[i]}">${donutValues[i]}%</span>
+    </div>`
+  ).join('');
+}
+
+/* ══════════════════════════════════════════
+   BAR CHART
+══════════════════════════════════════════ */
+function buildBarChart() {
+  const ctx = document.getElementById('barChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Email','Paid','Social','Organic','Referral','Affiliate'],
+      datasets: [
+        { label: 'New',       data: [4200, 3800, 5100, 6200, 2100, 1800], backgroundColor: 'rgba(0,229,255,0.7)',   borderRadius: 4 },
+        { label: 'Returning', data: [2800, 2100, 3400, 4100, 1400, 1200], backgroundColor: 'rgba(163,230,53,0.6)', borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: {
+          labels: { color: '#64748b', boxWidth: 10, font: { size: 11 } }
+        },
+        tooltip: {
+          backgroundColor: '#111827',
+          borderColor: '#1f2d45',
+          borderWidth: 1,
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#64748b' }, stacked: false },
+        y: { grid: { color: 'rgba(31,45,69,0.6)' }, ticks: { color: '#64748b' } }
+      }
+    }
+  });
+}
+
+/* ══════════════════════════════════════════
+   TABLE
+══════════════════════════════════════════ */
+function renderTable(data) {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = data.map(row => {
+    const statusClass = { active: 'status-active', pending: 'status-pending', inactive: 'status-inactive' }[row[6]];
+    const prog = row[5];
+    const progColor = prog >= 80 ? '#a3e635' : prog >= 50 ? '#00e5ff' : '#f59e0b';
+    return `
+      <tr>
+        <td><strong>${row[0]}</strong></td>
+        <td style="color:var(--muted)">${row[1]}</td>
+        <td style="font-family:var(--font-mono)">${row[2]}</td>
+        <td style="font-family:var(--font-mono)">${row[3]}</td>
+        <td style="font-family:var(--font-mono);color:var(--accent3)">${row[4]}</td>
+        <td style="min-width:100px">
+          <div class="progress-bar-custom">
+            <div class="progress-fill" style="width:${prog}%;background:${progColor}"></div>
+          </div>
+          <div style="font-size:0.65rem;color:var(--muted);margin-top:2px;font-family:var(--font-mono)">${prog}%</div>
+        </td>
+        <td><span class="status-badge ${statusClass}">${row[6].toUpperCase()}</span></td>
+      </tr>`;
+  }).join('');
+}
+
+function filterTable() {
+  const q = document.getElementById('tableSearch').value.toLowerCase();
+  const filtered = campaigns.filter(r => r.join(' ').toLowerCase().includes(q));
+  renderTable(filtered);
+}
+
+let sortAsc = true;
+function sortTable(col) {
+  const sorted = [...campaigns].sort((a, b) => {
+    const av = a[col].toString().replace(/[,$%]/g,'');
+    const bv = b[col].toString().replace(/[,$%]/g,'');
+    const n = parseFloat(av) - parseFloat(bv);
+    return sortAsc ? (isNaN(n) ? av.localeCompare(bv) : n) : (isNaN(n) ? bv.localeCompare(av) : -n);
+  });
+  sortAsc = !sortAsc;
+  renderTable(sorted);
+}
+
+/* ══════════════════════════════════════════
+   ACTIVITY FEED
+══════════════════════════════════════════ */
+let activityIndex = 0;
+function pushActivity() {
+  const [text, color] = eventTemplates[activityIndex % eventTemplates.length];
+  activityIndex++;
+  const feed = document.getElementById('activity-feed');
+  const item = document.createElement('div');
+  item.className = 'activity-item';
+  item.style.opacity = '0';
+  item.innerHTML = `
+    <div class="activity-dot" style="background:${color}"></div>
+    <div>
+      <div class="activity-text">${text}</div>
+      <div class="activity-time">just now</div>
+    </div>`;
+  feed.prepend(item);
+  requestAnimationFrame(() => { item.style.transition = 'opacity 0.4s'; item.style.opacity = '1'; });
+  // Keep max 8 items
+  while (feed.children.length > 8) feed.removeChild(feed.lastChild);
+  // Age previous items' timestamps
+  Array.from(feed.querySelectorAll('.activity-time')).forEach((t, i) => {
+    if (i > 0) t.textContent = (i * 12) + 's ago';
+  });
+}
+
+/* ══════════════════════════════════════════
+   REFRESH
+══════════════════════════════════════════ */
+function refreshData() {
+  const btn = document.querySelector('.refresh-btn');
+  btn.textContent = '↻ Loading...';
+  btn.disabled = true;
+  setTimeout(() => {
+    btn.textContent = '↻ Refresh';
+    btn.disabled = false;
+    pushActivity();
+  }, 800);
+}
+
+/* ══════════════════════════════════════════
+   INIT
+══════════════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+  loadKPIs();
+
+  drawSparkline('spark1', '#00e5ff', [62,70,68,75,88,95,91,103,110,118,132,148]);
+  drawSparkline('spark2', '#a3e635', [18,20,19,22,24,21,23,25,24,26,25,24]);
+  drawSparkline('spark3', '#f59e0b', [7.2,6.8,7.1,6.5,6.9,6.4,7.0,6.7,6.8,6.5,6.7,6.7]);
+  drawSparkline('spark4', '#ff6b6b', [32,35,31,34,36,33,35,34,35,34,35,34]);
+
+  buildRevenueChart('1Y');
+  buildDonutChart();
+  buildBarChart();
+  renderTable(campaigns);
+
+  // Seed 3 initial activity items
+  for (let i = 0; i < 3; i++) pushActivity();
+
+  // Auto-feed every 6s
+  setInterval(pushActivity, 6000);
+});
+</script>
+</body>
+</html>
 
